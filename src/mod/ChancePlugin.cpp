@@ -1,5 +1,5 @@
 #include "mod/ChancePlugin.h"
-#include "mod/ChanceCommand.h" // 引入命令头文件
+#include "mod/ChanceCommand.h"
 #include "ll/api/command/CommandRegistrar.h"
 #include "ll/api/mod/RegisterHelper.h"
 #include <memory>
