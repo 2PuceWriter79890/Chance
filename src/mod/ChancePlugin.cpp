@@ -1,4 +1,4 @@
-#include "scr/ChancePlugin.h"
+#include "mod/ChancePlugin.h"
 
 // LeviLamina & Minecraft Headers
 #include <ll/api/command/Command.h>
