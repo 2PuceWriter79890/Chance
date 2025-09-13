@@ -1,4 +1,4 @@
-#include "ChancePlugin.h"
+#include "mod/ChancePlugin.h"
 
 // LeviLamina & Minecraft Headers
 #include <ll/api/command/Command.h>
@@ -19,24 +19,22 @@
 
 namespace chance_plugin {
 
-// --- 静态变量和功能函数 (在命名空间内) ---
+// --- 静态变量和功能函数 ---
 
 // 冷却时间记录
 static std::unordered_map<std::string, std::chrono::steady_clock::time_point> gCooldowns;
-static const int COOLDOWN_SECONDS = 120; // 2分钟
+static const int COOLDOWN_SECONDS = 120;
 // 随机数生成器
 static std::unique_ptr<std::mt19937> gRng;
 
 
-// 生成一个 0.00-100.00 之间的概率值 (三角分布)
+// 生成概率值
 double generateChance() {
     std::uniform_real_distribution<double> dist(0.0, 50.0);
-    double r1 = dist(*gRng);
-    double r2 = dist(*gRng);
-    return r1 + r2;
+    return dist(*gRng) + dist(*gRng);
 }
 
-// 随机生成 0 (发生) 或 1 (不发生)
+// 生成结果
 int generateOutcome() {
     std::uniform_int_distribution<int> dist(0, 1);
     return dist(*gRng);
@@ -81,10 +79,8 @@ void chanceCommandCallback(
     ss << std::fixed << std::setprecision(2) << probability;
     std::string probabilityText = ss.str();
 
-    std::string line1 = "§e汝的所求事项：§f" + processedEvent;
-    std::string line2 = "§e结果：§f此事件有 §d" + probabilityText + "%§f 的概率会 " + outcomeText + "§f！";
-    player->sendMessage(line1);
-    player->sendMessage(line2);
+    player->sendMessage("§e汝的所求事项：§f" + processedEvent);
+    player->sendMessage("§e结果：§f此事件有 §d" + probabilityText + "%§f 的概率会 " + outcomeText + "§f！");
 
     if (!isOp) {
         gCooldowns[player->getRealName()] = std::chrono::steady_clock::now();
@@ -101,7 +97,7 @@ ChancePlugin& ChancePlugin::getInstance() {
 }
 
 bool ChancePlugin::load() {
-    getSelf().getLogger().info("ChancePlugin 正在加载..."); // 使用 info 级别日志
+    getSelf().getLogger().info("ChancePlugin 正在加载...");
     // 初始化随机数生成器
     std::random_device rd;
     gRng = std::make_unique<std::mt19937>(rd());
@@ -109,7 +105,7 @@ bool ChancePlugin::load() {
 }
 
 bool ChancePlugin::enable() {
-    getSelf().getLogger().info("ChancePlugin 正在启用..."); // 使用 info 级别日志
+    getSelf().getLogger().info("ChancePlugin 正在启用...");
     // 注册指令
     auto& registrar = ll::command::CommandRegistrar::getInstance();
     auto& cmdHandle = registrar.getOrCreateCommand("chance", "占卜事件发生的概率", CommandPermissionLevel::Any, {}, getSelf());
@@ -118,13 +114,12 @@ bool ChancePlugin::enable() {
 }
 
 bool ChancePlugin::disable() {
-    getSelf().getLogger().info("ChancePlugin 正在禁用..."); // 使用 info 级别日志
-    // 清理插件状态，为热重载做准备
+    getSelf().getLogger().info("ChancePlugin 正在禁用...");
     gCooldowns.clear();
     return true;
 }
 
 } // namespace chance_plugin
 
-// 使用宏将插件类和它的单例获取方法注册到 LeviLamina 加载器
+// 使用宏将插件类和它的单例获取方法注册到 LeviLamina，这会自动生成正确的入口点
 LL_REGISTER_MOD(chance_plugin::ChancePlugin, chance_plugin::ChancePlugin::getInstance());
