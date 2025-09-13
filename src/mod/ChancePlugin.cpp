@@ -9,15 +9,9 @@
 #include "mc/world/actor/player/Player.h"
 
 #include <iomanip>
-#include <memory>
-#include <random>
 #include <sstream>
 
 namespace chance_plugin {
-
-// 随机数生成器
-static std::unique_ptr<std::mt19937> gRng;
-
 
 // 主类实现
 ChancePlugin& ChancePlugin::getInstance() {
@@ -27,8 +21,9 @@ ChancePlugin& ChancePlugin::getInstance() {
 
 bool ChancePlugin::load() {
     getSelf().getLogger().info("ChancePlugin 正在加载...");
+    // 初始化成员变量 mRng
     std::random_device rd;
-    gRng = std::make_unique<std::mt19937>(rd());
+    mRng = std::make_unique<std::mt19937>(rd());
     return true;
 }
 
@@ -70,12 +65,13 @@ bool ChancePlugin::enable() {
 
             std::string processedEvent = params.event;
             processedEvent.erase(std::remove(processedEvent.begin(), processedEvent.end(), '\"'), processedEvent.end());
-
+            
+            // 使用成员变量 mRng
             std::uniform_real_distribution<double> distReal(0.0, 50.0);
-            double                                 probability = distReal(*gRng) + distReal(*gRng);
+            double                                 probability = distReal(*this->mRng) + distReal(*this->mRng);
 
             std::uniform_int_distribution<int> distInt(0, 1);
-            int                                outcome     = distInt(*gRng);
+            int                                outcome     = distInt(*this->mRng);
             std::string                        outcomeText = (outcome == 0) ? "§a发生" : "§c不发生";
 
             std::stringstream ss;
@@ -102,6 +98,6 @@ bool ChancePlugin::disable() {
 
 } // namespace chance_plugin
 
-// 先获取实例，再将实例传递给宏，这是最稳妥的注册方式
+// 注册插件
 chance_plugin::ChancePlugin& plugin = chance_plugin::ChancePlugin::getInstance();
 LL_REGISTER_MOD(chance_plugin::ChancePlugin, plugin);
