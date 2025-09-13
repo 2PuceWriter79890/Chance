@@ -8,8 +8,6 @@ class ChancePlugin {
 public:
     static ChancePlugin& getInstance();
 
-    ChancePlugin() : mSelf(*ll::mod::NativeMod::current()) {}
-
     ChancePlugin(const ChancePlugin&)            = delete;
     ChancePlugin& operator=(const ChancePlugin&) = delete;
 
@@ -20,6 +18,8 @@ public:
     bool disable();
 
 private:
+    ChancePlugin() : mSelf(*ll::mod::NativeMod::current()) {}
+
     ll::mod::NativeMod& mSelf;
 };
 
