@@ -17,7 +17,7 @@
 namespace chance_plugin {
 
 // --- 静态变量 ---
-// 随机数生成器仍然适合作为静态变量，因为它不包含与特定插件实例相关的状态
+// 随机数生成器
 static std::unique_ptr<std::mt19937> gRng;
 
 
@@ -57,11 +57,12 @@ bool ChancePlugin::enable() {
                 return;
             }
 
-            bool const isOp = origin.getPermissionsLevel() >= CommandPermissionLevel::GameMasters;
+            // [FIX 1] 使用正确的枚举名 GameDirectors 并添加作用域
+            bool const isOp = origin.getPermissionsLevel() >= CommandPermissionLevel::GameDirectors;
             
-            // 使用 this->mCooldowns 访问成员变量
             if (!isOp) {
-                auto&      playerName = player->getRealName();
+                // [FIX 2] 将 auto& 改为 auto
+                auto       playerName = player->getRealName();
                 auto const now        = std::chrono::steady_clock::now();
                 if (this->mCooldowns.count(playerName)) {
                     auto const lastUsed    = this->mCooldowns.at(playerName);
@@ -94,7 +95,8 @@ bool ChancePlugin::enable() {
             if (!isOp) {
                 this->mCooldowns[player->getRealName()] = std::chrono::steady_clock::now();
             }
-            output.success();
+            
+            // [FIX 3] 移除无效的 output.success() 调用
         }
     );
 
@@ -103,11 +105,10 @@ bool ChancePlugin::enable() {
 
 bool ChancePlugin::disable() {
     getSelf().getLogger().info("ChancePlugin 正在禁用...");
-    // 清理冷却数据
     mCooldowns.clear();
     return true;
 }
 
 } // namespace chance_plugin
 
-LL_REGISTER_MOD(chance_plugin::ChancePlugin, chance_plugin::ChancePlugin::getInstance());
+LL_REGISTER_MOD(chance_plugin::ChancePlugin, chance_plugin::getInstance());
