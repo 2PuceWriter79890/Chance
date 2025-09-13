@@ -1,16 +1,15 @@
 #include "mod/ChancePlugin.h"
 
-// LeviLamina & Minecraft Headers
 #include <ll/api/command/Command.h>
 #include <ll/api/command/CommandRegistrar.h>
 #include <ll/api/io/Logger.h>
 #include <ll/api/mod/RegisterHelper.h>
-#include <mc/server/commands/CommandOrigin.h>   // 包含正确的头文件
-#include <mc/server/commands/CommandOutput.h>   // 包含正确的头文件
+#include <mc/server/commands/CommandOrigin.h>
+#include <mc/server/commands/CommandOutput.h>
 #include <mc/server/commands/CommandPermissionLevel.h>
 #include <mc/world/actor/player/Player.h>
 
-// Standard C++ Library Headers
+// 标准库
 #include <chrono>
 #include <iomanip>
 #include <memory>
@@ -27,37 +26,37 @@ static std::unordered_map<std::string, std::chrono::steady_clock::time_point> gC
 static const int COOLDOWN_SECONDS = 120;
 static std::unique_ptr<std::mt19937> gRng;
 
-
-// 生成概率值
 double generateChance() {
     std::uniform_real_distribution<double> dist(0.0, 50.0);
     return dist(*gRng) + dist(*gRng);
 }
 
-// 生成结果
 int generateOutcome() {
     std::uniform_int_distribution<int> dist(0, 1);
     return dist(*gRng);
 }
 
-// 指令回调函数
-// ---vvv--- 这里是关键的修正点 ---vvv---
+// --- 指令回调函数 (已最终修正) ---
 void chanceCommandCallback(
-    CommandOrigin const&          origin, // 修正：移除 ll::command::
-    CommandOutput&                output, // 修正：移除 ll::command::
+    CommandOrigin const&          origin, // 修正：移除 ll::command::，使用全局命名空间的 CommandOrigin
+    CommandOutput&                output, // 修正：移除 ll::command::，使用全局命名空间的 CommandOutput
     struct Command_Params { std::string event; } const& params
 ) {
-// ---^^^--- 修正结束 ---^^^---
-    auto* player = origin.getEntity(); // CommandOrigin 中获取 Actor* 需要用 getEntity()
+    // 修正：从 CommandOrigin 获取通用的 Actor*，然后安全地转换为 Player*
+    auto* actor = origin.getEntity();
+    auto* player = dynamic_cast<Player*>(actor);
+
     if (!player) {
         output.error("该指令只能由玩家执行。");
         return;
     }
 
-    bool const isOp = origin.getPermissionsLevel() >= CommandPermissionLevel::GameMasters; // 通过 CommandOrigin 获取权限等级
+    // 修正：直接从 CommandOrigin 获取权限等级
+    bool const isOp = origin.getPermissionsLevel() >= CommandPermissionLevel::GameMasters;
 
     if (!isOp) {
-        auto&      playerName = player->getName(); // Actor 中获取名字用 getName()
+        // Player 类 API 确认使用 getRealName()
+        auto&      playerName = player->getRealName();
         auto const now        = std::chrono::steady_clock::now();
         if (gCooldowns.count(playerName)) {
             auto const lastUsed    = gCooldowns.at(playerName);
@@ -81,13 +80,14 @@ void chanceCommandCallback(
     ss << std::fixed << std::setprecision(2) << probability;
     std::string probabilityText = ss.str();
 
-    // Player 类有 sendMessage，但 Actor 类没有，所以需要通过 output 对象来发送消息
-    output.success("§e汝的所求事项：§f" + processedEvent);
-    output.success("§e结果：§f此事件有 §d" + probabilityText + "%§f 的概率会 " + outcomeText + "§f！");
+    // Player 类 API 确认使用 sendMessage()
+    player->sendMessage("§e汝的所求事项：§f" + processedEvent);
+    player->sendMessage("§e结果：§f此事件有 §d" + probabilityText + "%§f 的概率会 " + outcomeText + "§f！");
 
     if (!isOp) {
-        gCooldowns[player->getName()] = std::chrono::steady_clock::now();
+        gCooldowns[player->getRealName()] = std::chrono::steady_clock::now();
     }
+    output.success();
 }
 
 
