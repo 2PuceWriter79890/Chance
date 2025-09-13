@@ -31,7 +31,6 @@ struct CommandParams {
 };
 
 // --- 核心执行函数 ---
-// 这是一个静态函数，作为命令的回调
 static void execute(CommandOrigin const& origin, CommandOutput& output, CommandParams const& params) {
     auto* actor  = origin.getEntity();
     auto* player = dynamic_cast<Player*>(actor);
@@ -41,10 +40,12 @@ static void execute(CommandOrigin const& origin, CommandOutput& output, CommandP
         return;
     }
 
-    bool const isOp = origin.getPermissionsLevel() >= CommandPermissionLevel::GameMasters;
+    // [FIX 1] Correctly reference the scoped enum value 'GameDirectors'.
+    bool const isOp = origin.getPermissionsLevel() >= CommandPermissionLevel::GameDirectors;
 
     if (!isOp) {
-        auto&      playerName = player->getRealName();
+        // [FIX 2] Change 'auto&' to 'auto' to create a local copy from the temporary string.
+        auto       playerName = player->getRealName();
         auto const now        = std::chrono::steady_clock::now();
         if (gCooldowns.count(playerName)) {
             auto const lastUsed    = gCooldowns.at(playerName);
@@ -77,13 +78,14 @@ static void execute(CommandOrigin const& origin, CommandOutput& output, CommandP
     if (!isOp) {
         gCooldowns[player->getRealName()] = std::chrono::steady_clock::now();
     }
-    output.success();
+    
+    // [FIX 3] Remove the empty success() call as it's invalid and redundant.
 }
 
 // --- 注册函数的实现 ---
 void ChanceCommand::reg(ll::command::CommandHandle& handle) {
-    // 注册一个重载，它使用 CommandParams 结构体，并绑定到静态的 execute 函数
-    handle.overload<CommandParams>().execute<execute>();
+    // [FIX 4] Pass the callback as a function argument, not a template argument.
+    handle.overload<CommandParams>().execute(execute);
 }
 
 void ChanceCommand::clearCooldowns() { gCooldowns.clear(); }
