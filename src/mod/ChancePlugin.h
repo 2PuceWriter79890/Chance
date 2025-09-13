@@ -2,6 +2,10 @@
 
 #include "ll/api/mod/NativeMod.h"
 
+#include <chrono>
+#include <string>
+#include <unordered_map>
+
 namespace chance_plugin {
 
 class ChancePlugin {
@@ -21,6 +25,8 @@ private:
     ChancePlugin() : mSelf(*ll::mod::NativeMod::current()) {}
 
     ll::mod::NativeMod& mSelf;
+
+    std::unordered_map<std::string, std::chrono::steady_clock::time_point> mCooldowns;
 };
 
 } // namespace chance_plugin
