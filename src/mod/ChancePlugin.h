@@ -1,14 +1,14 @@
 #pragma once
 
-#include <ll/api/mod/NativeMod.h>
+#include "ll/api/mod/NativeMod.h"
 
 namespace chance_plugin {
 
 class ChancePlugin {
 public:
-    static ChancePlugin& getInstance(ll::mod::NativeMod& self);
-
     static ChancePlugin& getInstance();
+
+    ChancePlugin() : mSelf(*ll::mod::NativeMod::current()) {}
 
     ChancePlugin(const ChancePlugin&)            = delete;
     ChancePlugin& operator=(const ChancePlugin&) = delete;
@@ -20,8 +20,6 @@ public:
     bool disable();
 
 private:
-    explicit ChancePlugin(ll::mod::NativeMod& self);
-
     ll::mod::NativeMod& mSelf;
 };
 
