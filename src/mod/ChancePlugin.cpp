@@ -1,4 +1,4 @@
-#include "mod/ChancePlugin.h"
+#include "ChancePlugin.h"
 
 #include "ll/api/command/CommandHandle.h"
 #include "ll/api/command/CommandRegistrar.h"
@@ -13,39 +13,37 @@
 
 namespace chance_plugin {
 
-// 主类实现
+// Main class implementation
 ChancePlugin& ChancePlugin::getInstance() {
     static ChancePlugin instance;
     return instance;
 }
 
 bool ChancePlugin::load() {
-    getSelf().getLogger().info("ChancePlugin 正在加载...");
-    // 初始化成员变量 mRng
+    getSelf().getLogger().info("ChancePlugin Loading...");
+    // Initialize the mRng member variable
     std::random_device rd;
     mRng = std::make_unique<std::mt19937>(rd());
     return true;
 }
 
 bool ChancePlugin::enable() {
-    getSelf().getLogger().info("ChancePlugin 正在启用...");
+    getSelf().getLogger().info("ChancePlugin Enabling...");
     auto& registrar = ll::command::CommandRegistrar::getInstance();
     auto& handle =
-        registrar.getOrCreateCommand("chance", "占卜事件发生的概率", CommandPermissionLevel::Any, {}, ll::mod::Native_mod::current());
+        registrar.getOrCreateCommand("chance", "Divine the probability of an event", CommandPermissionLevel::Any, {}, ll::mod::NativeMod::current());
 
-    // ---vvv---  这里是关键的修正点 ---vvv---
-    // 将参数结构体的成员名改为您希望在游戏中显示的文本
+    // The parameter structure for the command
     struct Params {
         std::string 所求事项;
     };
-    // ---^^^--- 修正结束 ---^^^---
 
     handle.overload<Params>().execute(
         [this](CommandOrigin const& origin, CommandOutput& output, Params const& params) {
             auto* actor  = origin.getEntity();
             
             if (!actor || !actor->isPlayer()) {
-                output.error("该指令只能由玩家执行。");
+                output.error("This command can only be executed by a player.");
                 return;
             }
             auto* player = static_cast<Player*>(actor);
@@ -60,13 +58,13 @@ bool ChancePlugin::enable() {
                     auto const timeElapsed = std::chrono::duration_cast<std::chrono::seconds>(now - lastUsed).count();
                     if (timeElapsed < 120) {
                         long long remaining = 120 - timeElapsed;
-                        output.error("指令冷却中，请在 " + std::to_string(remaining) + " 秒后重试。");
+                        output.error("Command is on cooldown, please try again in " + std::to_string(remaining) + " seconds.");
                         return;
                     }
                 }
             }
 
-            // 使用重命名后的参数
+            // Use the renamed parameter
             std::string processedEvent = params.所求事项;
             processedEvent.erase(std::remove(processedEvent.begin(), processedEvent.end(), '\"'), processedEvent.end());
             
@@ -75,14 +73,14 @@ bool ChancePlugin::enable() {
 
             std::uniform_int_distribution<int> distInt(0, 1);
             int                                outcome     = distInt(*this->mRng);
-            std::string                        outcomeText = (outcome == 0) ? "§a发生" : "§c不发生";
+            std::string                        outcomeText = (outcome == 0) ? "§aoccur" : "§cnot occur";
 
             std::stringstream ss;
             ss << std::fixed << std::setprecision(2) << probability;
             std::string probabilityText = ss.str();
 
-            player->sendMessage("§e汝的所求事项：§f" + processedEvent);
-            player->sendMessage("§e结果：§f此事件有 §d" + probabilityText + "%§f 的概率会 " + outcomeText + "§f！");
+            player->sendMessage("§eYour sought-after matter: §f" + processedEvent);
+            player->sendMessage("§eResult: §fThis event has a §d" + probabilityText + "%§f chance to §b" + outcomeText + "§f!");
 
             if (!isOp) {
                 this->mCooldowns[player->getRealName()] = std::chrono::steady_clock::now();
@@ -94,13 +92,13 @@ bool ChancePlugin::enable() {
 }
 
 bool ChancePlugin::disable() {
-    getSelf().getLogger().info("ChancePlugin 正在禁用...");
+    getSelf().getLogger().info("ChancePlugin Disabling...");
     mCooldowns.clear();
     return true;
 }
 
 } // namespace chance_plugin
 
-// 注册插件
+// Register the plugin
 chance_plugin::ChancePlugin& plugin = chance_plugin::ChancePlugin::getInstance();
 LL_REGISTER_MOD(chance_plugin::ChancePlugin, plugin);
