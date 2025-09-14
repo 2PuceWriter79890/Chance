@@ -31,17 +31,19 @@ bool ChancePlugin::enable() {
     getSelf().getLogger().info("ChancePlugin 正在启用...");
     auto& registrar = ll::command::CommandRegistrar::getInstance();
     auto& handle =
-        registrar.getOrCreateCommand("chance", "占卜事件发生的概率", CommandPermissionLevel::Any, {}, ll::mod::NativeMod::current());
+        registrar.getOrCreateCommand("chance", "占卜事件发生的概率", CommandPermissionLevel::Any, {}, ll::mod::Native_mod::current());
 
+    // ---vvv---  这里是关键的修正点 ---vvv---
+    // 将参数结构体的成员名改为您希望在游戏中显示的文本
     struct Params {
-        std::string event;
+        std::string 所求事项;
     };
+    // ---^^^--- 修正结束 ---^^^---
 
     handle.overload<Params>().execute(
         [this](CommandOrigin const& origin, CommandOutput& output, Params const& params) {
             auto* actor  = origin.getEntity();
             
-            // 解决 RTTI 问题的核心代码
             if (!actor || !actor->isPlayer()) {
                 output.error("该指令只能由玩家执行。");
                 return;
@@ -64,10 +66,10 @@ bool ChancePlugin::enable() {
                 }
             }
 
-            std::string processedEvent = params.event;
+            // 使用重命名后的参数
+            std::string processedEvent = params.所求事项;
             processedEvent.erase(std::remove(processedEvent.begin(), processedEvent.end(), '\"'), processedEvent.end());
             
-            // 使用恢复的变量名 mRng
             std::uniform_real_distribution<double> distReal(0.0, 50.0);
             double                                 probability = distReal(*this->mRng) + distReal(*this->mRng);
 
