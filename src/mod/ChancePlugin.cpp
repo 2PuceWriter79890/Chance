@@ -40,12 +40,13 @@ bool ChancePlugin::enable() {
     handle.overload<Params>().execute(
         [this](CommandOrigin const& origin, CommandOutput& output, Params const& params) {
             auto* actor  = origin.getEntity();
-            auto* player = dynamic_cast<Player*>(actor);
-
-            if (!player) {
+            
+            // 解决 RTTI 问题的核心代码
+            if (!actor || !actor->isPlayer()) {
                 output.error("该指令只能由玩家执行。");
                 return;
             }
+            auto* player = static_cast<Player*>(actor);
 
             bool const isOp = origin.getPermissionsLevel() >= CommandPermissionLevel::GameDirectors;
             
@@ -66,7 +67,7 @@ bool ChancePlugin::enable() {
             std::string processedEvent = params.event;
             processedEvent.erase(std::remove(processedEvent.begin(), processedEvent.end(), '\"'), processedEvent.end());
             
-            // 使用成员变量 mRng
+            // 使用恢复的变量名 mRng
             std::uniform_real_distribution<double> distReal(0.0, 50.0);
             double                                 probability = distReal(*this->mRng) + distReal(*this->mRng);
 
