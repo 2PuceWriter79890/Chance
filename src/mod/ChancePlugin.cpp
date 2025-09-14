@@ -30,7 +30,9 @@ bool ChancePlugin::load() {
 
 bool ChancePlugin::enable() {
     getSelf().getLogger().info("ChancePlugin 正在启用...");
-    auto& registrar = ll::api::command::CommandRegistrar::getInstance();
+    // ---vvv---  这里是关键的修正点 ---vvv---
+    auto& registrar = ll::command::CommandRegistrar::getInstance();
+    // ---^^^--- 修正结束 ---^^^---
     auto& handle =
         registrar.getOrCreateCommand("chance", "占卜事件发生的概率", CommandPermissionLevel::Any, {}, ll::mod::NativeMod::current());
 
@@ -70,11 +72,7 @@ bool ChancePlugin::enable() {
                 }
             }
             
-            // ---vvv---  这里是关键的修正点 ---vvv---
-            // 通过 .mText 成员变量获取 CommandRawText 中的字符串
             std::string processedEvent = params.所求事项.mText;
-            // ---^^^--- 修正结束 ---^^^---
-
             processedEvent.erase(std::remove(processedEvent.begin(), processedEvent.end(), '\"'), processedEvent.end());
             
             std::uniform_real_distribution<double> distReal(0.0, 50.0);
