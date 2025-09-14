@@ -7,6 +7,7 @@
 #include "mc/server/commands/CommandOrigin.h"
 #include "mc/server/commands/CommandOutput.h"
 #include "mc/server/commands/CommandPermissionLevel.h"
+#include "mc/server/commands/CommandRawText.h"
 #include "mc/world/actor/player/Player.h"
 
 #include <iomanip>
@@ -29,22 +30,18 @@ bool ChancePlugin::load() {
 
 bool ChancePlugin::enable() {
     getSelf().getLogger().info("ChancePlugin 正在启用...");
-    auto& registrar = ll::command::CommandRegistrar::getInstance();
+    auto& registrar = ll::api::command::CommandRegistrar::getInstance();
     auto& handle =
         registrar.getOrCreateCommand("chance", "占卜事件发生的概率", CommandPermissionLevel::Any, {}, ll::mod::NativeMod::current());
 
-    // 重载 1: 处理不带参数的情况
     handle.overload().execute(
-        // 通过移除未使用的参数名 'origin' 来修复 C4100 警告
         [](CommandOrigin const& /*origin*/, CommandOutput& output) {
             output.error("用法: /chance <所求事项>"); 
         }
     );
 
-    // 重载 2: 处理带有所求事项的情况
     struct Params {
-        // [FIX] 'GreedyString' 是 'll::command' 的直接成员，而不是 'll::command::Command' 的
-        ll::command::GreedyString 所求事项;
+        CommandRawText 所求事项;
     };
 
     handle.overload<Params>().execute(
@@ -73,7 +70,11 @@ bool ChancePlugin::enable() {
                 }
             }
             
-            std::string processedEvent = params.所求事项.value;
+            // ---vvv---  这里是关键的修正点 ---vvv---
+            // 通过 .mText 成员变量获取 CommandRawText 中的字符串
+            std::string processedEvent = params.所求事项.mText;
+            // ---^^^--- 修正结束 ---^^^---
+
             processedEvent.erase(std::remove(processedEvent.begin(), processedEvent.end(), '\"'), processedEvent.end());
             
             std::uniform_real_distribution<double> distReal(0.0, 50.0);
