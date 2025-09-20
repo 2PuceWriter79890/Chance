@@ -2,12 +2,11 @@
 
 #include "ll/api/command/CommandHandle.h"
 #include "ll/api/command/CommandRegistrar.h"
-#include "ll/api/form/CustomForm.h" // [FIX] 这是唯一需要的表单头文件
+#include "ll/api/form/CustomForm.h" // 唯一的表单头文件
 #include "ll/api/mod/RegisterHelper.h"
 #include "mc/server/commands/CommandOrigin.h"
 #include "mc/server/commands/CommandOutput.h"
-#include "mc/server/commands/CommandPermissionLevel.h"
-#include "mc/world/actor/player/Player.h" // [FIX] 使用您指定的正确 Player 头文件
+#include "mc/world/actor/player/Player.h"
 
 #include <iomanip>
 #include <sstream>
@@ -58,25 +57,44 @@ bool ChancePlugin::enable() {
                 }
             }
 
-            auto form = std::make_shared<ll::form::CustomForm>("§d§l吉凶占卜");
-            form->addInput("event", "§b请输入汝所求之事：\n§7(例如：娶老杨)");
+            // ---vvv---  使用正确的表单 API ---vvv---
 
-            // [FIX] 最终修正：使用独立的、且很可能定义在 CustomForm.h 中的 ll::form::sendForm 函数
-            ll::form::sendForm(
-                player,
-                form,
-                [this](Player* player, ll::form::CustomFormResponse const& resp) {
-                    if (resp.isTerminated()) {
+            // 1. 创建表单对象 (不再需要 shared_ptr)
+            ll::form::CustomForm form("§d§l吉凶占卜");
+
+            // 2. 使用 appendInput 添加元素
+            form.appendInput("event", "§b请输入汝所求之事：\n§7(例：娶老杨)");
+
+            // 3. 使用 form.sendTo 发送表单，并传入新的回调函数
+            form.sendTo(
+                *player,
+                [this](Player& cbPlayer, ll::form::CustomFormResult const& result, ll::form::FormCancelReason reason) {
+                    // 检查表单是否被玩家关闭
+                    if (reason != ll::form::FormCancelReason::NotCancelled) {
+                        return;
+                    }
+                    // 检查玩家是否提交了数据
+                    if (!result) {
+                        cbPlayer.sendMessage("§c提交数据为空，天机不可泄露。");
                         return;
                     }
 
-                    auto eventText = resp.getInput("event");
-                    if (!eventText || eventText->empty()) {
-                        player->sendMessage("§c汝未填写所求之事，天机不可泄露。");
+                    // 从结果 map 中查找我们的输入框
+                    auto const& resultMap = *result;
+                    auto        it        = resultMap.find("event");
+                    if (it == resultMap.end()) {
+                        return; // 找不到 "event" 输入框
+                    }
+
+                    // 从 std::variant 中提取字符串
+                    std::string eventText = std::get<std::string>(it->second);
+
+                    if (eventText.empty()) {
+                        cbPlayer.sendMessage("§c汝未填写所求之事，天机不可泄露。");
                         return;
                     }
 
-                    std::string processedEvent = *eventText;
+                    std::string processedEvent = eventText;
                     processedEvent.erase(
                         std::remove(processedEvent.begin(), processedEvent.end(), '\"'),
                         processedEvent.end()
@@ -93,12 +111,14 @@ bool ChancePlugin::enable() {
                     ss << std::fixed << std::setprecision(2) << probability;
                     std::string probabilityText = ss.str();
 
-                    player->sendMessage("§e汝的所求事项：§f" + processedEvent);
-                    player->sendMessage(
+                    cbPlayer.sendMessage("§e汝的所求事项：§f" + processedEvent);
+                    cbPlayer.sendMessage(
                         "§e结果：§f此事件有 §d" + probabilityText + "%§f 的概率会 " + outcomeText + "§f！"
                     );
                 }
             );
+
+            // ---^^^--- API 修正结束 ---^^^---
 
             if (!isOp) {
                 this->mCooldowns[player->getRealName()] = std::chrono::steady_clock::now();
