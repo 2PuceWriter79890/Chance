@@ -58,7 +58,7 @@ bool ChancePlugin::enable() {
             }
 
             ll::form::CustomForm form("§d§l吉凶占卜");
-            form.appendInput("event", "§b请输入汝所求之事：\n§7(例如：我能否成仙)");
+            form.appendInput("event", "§b请输入汝所求之事：\n§7(例：娶老杨)");
 
             form.sendTo(
                 *player,
@@ -79,7 +79,7 @@ bool ChancePlugin::enable() {
                     std::string eventText = std::get<std::string>(it->second);
 
                     if (eventText.empty()) {
-                        cbPlayer.sendMessage("§c汝未填写所求之事，天机不可泄露。");
+                        cbPlayer.sendMessage("§c汝未填写所求之事，天机不可泄露");
                         return;
                     }
 
