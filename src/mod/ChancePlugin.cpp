@@ -1,7 +1,11 @@
 #include "mod/ChancePlugin.h"
 
+#include "ll/api/command/Command.h"
+#include "ll/api/command/CommandHandle.h"         // [FIX] 引入 CommandHandle 的完整定义
 #include "ll/api/command/CommandRegistrar.h"
-#include "ll/api/form/CustomForm.h" // [NEW] 引入 CustomForm 头文件
+#include "ll/api/form/CustomForm.h"
+#include "ll/api/form/FormResponse.h"        // [FIX] 引入表单回应的完整定义
+#include "ll/api/form/Forms.h"               // [FIX] 引入表单的全局函数 (如 sendForm)
 #include "ll/api/mod/RegisterHelper.h"
 #include "mc/server/commands/CommandOrigin.h"
 #include "mc/server/commands/CommandOutput.h"
@@ -32,21 +36,17 @@ bool ChancePlugin::enable() {
     auto& handle =
         registrar.getOrCreateCommand("chance", "打开占卜表单", CommandPermissionLevel::Any, {}, ll::mod::NativeMod::current());
 
-    // ---vvv---  这里是关键的修正点 ---vvv---
-
-    // 指令现在只有一个无参数的重载，用于打开表单
     handle.overload().execute(
         [this](CommandOrigin const& origin, CommandOutput& output) {
             auto* actor = origin.getEntity();
             if (!actor || !actor->isPlayer()) {
-                output.error("该指令只能由控制台或玩家执行。");
+                output.error("该指令只能由玩家执行。");
                 return;
             }
             auto* player = static_cast<Player*>(actor);
 
             bool const isOp = origin.getPermissionsLevel() >= CommandPermissionLevel::GameDirectors;
 
-            // 1. 先检查冷却
             if (!isOp) {
                 auto       playerName = player->getRealName();
                 auto const now        = std::chrono::steady_clock::now();
@@ -61,21 +61,18 @@ bool ChancePlugin::enable() {
                 }
             }
 
-            // 2. 创建并发送表单
             auto form = std::make_shared<ll::form::CustomForm>("§d§l吉凶占卜");
-            form->addInput("event", "§b请输入汝所求之事：\n§7(例如：我能否成仙)"); // key 为 "event"
+            form->addInput("event", "§b请输入汝所求之事：\n§7(例如：我能否成仙)");
 
-            // 发送表单并设置一个回调函数来处理玩家的提交
-            player->sendForm(
+            // [FIX] 使用独立的 ll::form::sendForm 函数，而不是 player->sendForm
+            ll::form::sendForm(
+                player,
                 form,
-                // --- 表单回调逻辑 ---
-                [this, player, isOp](ll::form::CustomFormResponse const& resp) {
-                    // 如果玩家关闭了表单，则不执行任何操作
+                [this](Player* player, ll::form::CustomFormResponse const& resp) {
                     if (resp.isTerminated()) {
                         return;
                     }
 
-                    // 从表单回复中获取名为 "event" 的输入框内容
                     auto eventText = resp.getInput("event");
                     if (!eventText || eventText->empty()) {
                         player->sendMessage("§c汝未填写所求之事，天机不可泄露。");
@@ -88,7 +85,6 @@ bool ChancePlugin::enable() {
                         processedEvent.end()
                     );
 
-                    // --- 执行核心占卜逻辑 ---
                     std::uniform_real_distribution<double> distReal(0.0, 50.0);
                     double probability = distReal(*this->mRng) + distReal(*this->mRng);
 
@@ -107,13 +103,11 @@ bool ChancePlugin::enable() {
                 }
             );
 
-            // 3. 发送表单后，立即更新冷却时间
             if (!isOp) {
                 this->mCooldowns[player->getRealName()] = std::chrono::steady_clock::now();
             }
         }
     );
-    // ---^^^--- 修正结束 ---^^^---
 
     return true;
 }
