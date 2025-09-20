@@ -2,7 +2,7 @@
 
 #include "ll/api/command/CommandHandle.h"
 #include "ll/api/command/CommandRegistrar.h"
-#include "ll/api/form/CustomForm.h"
+#include "ll/api/form/CustomForm.h" // [FIX] 这是唯一需要的表单头文件，它包含了所有定义
 #include "ll/api/mod/RegisterHelper.h"
 #include "mc/server/commands/CommandOrigin.h"
 #include "mc/server/commands/CommandOutput.h"
@@ -23,7 +23,7 @@ ChancePlugin& ChancePlugin::getInstance() {
 bool ChancePlugin::load() {
     getSelf().getLogger().info("ChancePlugin 正在加载...");
     std::random_device rd;
-    // [FIX 1] 将 mt1993T 改回 mt19937
+    // [FIX] 修正了上一版的拼写错误
     mRng = std::make_unique<std::mt19937>(rd());
     return true;
 }
@@ -62,9 +62,10 @@ bool ChancePlugin::enable() {
             auto form = std::make_shared<ll::form::CustomForm>("§d§l吉凶占卜");
             form->addInput("event", "§b请输入汝所求之事：\n§7(例如：我能否成仙)");
 
-            player->sendForm(
+            // [FIX] 使用独立的 ll::form::sendForm 函数，而不是 player->sendForm
+            ll::form::sendForm(
+                player,
                 form,
-                // [FIX 2] 将 ll-form 改回 ll::form
                 [this](Player* player, ll::form::CustomFormResponse const& resp) {
                     if (resp.isTerminated()) {
                         return;
