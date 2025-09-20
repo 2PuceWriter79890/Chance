@@ -3,7 +3,7 @@
 #include "ll/api/command/CommandHandle.h"
 #include "ll/api/command/CommandRegistrar.h"
 #include "ll/api/form/CustomForm.h"
-#include "ll/api/form/SimpleForm.h" // [NEW] 引入 SimpleForm 头文件
+#include "ll/api/form/SimpleForm.h"
 #include "ll/api/mod/RegisterHelper.h"
 #include "mc/server/commands/CommandOrigin.h"
 #include "mc/server/commands/CommandOutput.h"
@@ -23,22 +23,22 @@ ChancePlugin& ChancePlugin::getInstance() {
 
 // [MODIFIED] 使用 SimpleForm 替换 ModalForm
 void ChancePlugin::showDisclaimerForm(Player& player) {
-    // 1. 创建一个 SimpleForm
     ll::form::SimpleForm form("§e§l使用申明", "§f此插件仅供娱乐，不提供任何参考价值。\n\n§7点击“确认”即表示您同意此条款。");
 
-    // 2. 添加带图标的按钮
-    form.addButton("§a确认 (Confirm)", "textures/icon/True"); // 按钮 0
-    form.addButton("§c退出 (Exit)", "textures/icon/False");    // 按钮 1
+    // [FIX] 1. 方法名是 appendButton
+    // [FIX] 2. 带图标需要三个参数: text, image path, image type ("path")
+    form.appendButton("§a确认 (Confirm)", "textures/icon/True", "path"); // 按钮 0
+    form.appendButton("§c退出 (Exit)", "textures/icon/False", "path");    // 按钮 1
 
-    // 3. 发送表单并处理回调
-    form.sendTo(player, [this](Player& cbPlayer, ll::form::SimpleFormResponse const& result, ll::form::FormCancelReason) {
-        // 检查玩家是否点击了按钮（而不是关闭表单）
-        if (!result) {
+    // [FIX] 3. 回调函数的签名和逻辑已根据头文件更新
+    form.sendTo(player, [this](Player& cbPlayer, int buttonIndex, ll::form::FormCancelReason reason) {
+        // 如果表单被关闭或取消，则 reason 会有值
+        if (reason) {
             return;
         }
 
         // 检查玩家是否点击了第一个按钮（“确认”）
-        if (result->getClickedButtonIndex() == 0) {
+        if (buttonIndex == 0) {
             mConfirmedPlayers.insert(cbPlayer.getRealName());
             cbPlayer.sendMessage("§a您已同意使用申明。");
             
