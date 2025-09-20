@@ -3,7 +3,7 @@
 #include "ll/api/command/CommandHandle.h"
 #include "ll/api/command/CommandRegistrar.h"
 #include "ll/api/form/CustomForm.h"
-#include "ll/api/form/ModalForm.h"
+#include "ll/api/form/SimpleForm.h" // [NEW] 引入 SimpleForm 头文件
 #include "ll/api/mod/RegisterHelper.h"
 #include "mc/server/commands/CommandOrigin.h"
 #include "mc/server/commands/CommandOutput.h"
@@ -21,21 +21,27 @@ ChancePlugin& ChancePlugin::getInstance() {
     return instance;
 }
 
-// 显示申明表单
+// [MODIFIED] 使用 SimpleForm 替换 ModalForm
 void ChancePlugin::showDisclaimerForm(Player& player) {
-    ll::form::ModalForm form(
-        "§e§l使用申明",
-        "§f此插件仅供娱乐，不提供任何参考价值。\n\n§7点击“确认”即表示您同意此条款。",
-        "§a确认 (Confirm)",
-        "§c退出 (Exit)"
-    );
+    // 1. 创建一个 SimpleForm
+    ll::form::SimpleForm form("§e§l使用申明", "§f此插件仅供娱乐，不提供任何参考价值。\n\n§7点击“确认”即表示您同意此条款。");
 
-    form.sendTo(player, [this](Player& cbPlayer, ll::form::ModalFormResult const& result, ll::form::FormCancelReason) {
-        if (result && *result == ll::form::ModalFormSelectedButton::Upper) {
+    // 2. 添加带图标的按钮
+    form.addButton("§a确认 (Confirm)", "textures/icon/True"); // 按钮 0
+    form.addButton("§c退出 (Exit)", "textures/icon/False");    // 按钮 1
+
+    // 3. 发送表单并处理回调
+    form.sendTo(player, [this](Player& cbPlayer, ll::form::SimpleFormResponse const& result, ll::form::FormCancelReason) {
+        // 检查玩家是否点击了按钮（而不是关闭表单）
+        if (!result) {
+            return;
+        }
+
+        // 检查玩家是否点击了第一个按钮（“确认”）
+        if (result->getClickedButtonIndex() == 0) {
             mConfirmedPlayers.insert(cbPlayer.getRealName());
             cbPlayer.sendMessage("§a您已同意使用申明。");
             
-            // [MODIFIED] 首次同意后，立即更新冷却时间并打开表单
             bool isOp = cbPlayer.getCommandPermissionLevel() >= CommandPermissionLevel::GameDirectors;
             if (!isOp) {
                 this->mCooldowns[cbPlayer.getRealName()] = std::chrono::steady_clock::now();
@@ -45,7 +51,6 @@ void ChancePlugin::showDisclaimerForm(Player& player) {
     });
 }
 
-// 显示占卜表单
 void ChancePlugin::showDivinationForm(Player& player) {
     ll::form::CustomForm form("§d§l吉凶占卜");
     form.appendInput("event", "§b请输入汝所求之事：\n§7(例如：我能否成仙)");
@@ -111,9 +116,7 @@ bool ChancePlugin::enable() {
         }
         auto* player = static_cast<Player*>(actor);
 
-        // [MODIFIED] 主要逻辑变更
         if (mConfirmedPlayers.count(player->getRealName())) {
-            // 如果玩家已确认申明，则检查冷却时间
             bool const isOp = origin.getPermissionsLevel() >= CommandPermissionLevel::GameDirectors;
             if (!isOp) {
                 auto       playerName = player->getRealName();
@@ -128,13 +131,11 @@ bool ChancePlugin::enable() {
                     }
                 }
             }
-            // 冷却检查通过后，更新时间戳并显示表单
              if (!isOp) {
                 this->mCooldowns[player->getRealName()] = std::chrono::steady_clock::now();
             }
             showDivinationForm(*player);
         } else {
-            // 如果玩家未确认，显示申明表单
             showDisclaimerForm(*player);
         }
     });
