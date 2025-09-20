@@ -1,8 +1,8 @@
-#include "mod/ChancePlugin.h"
+#include "ChancePlugin.h"
 
 #include "ll/api/command/CommandHandle.h"
 #include "ll/api/command/CommandRegistrar.h"
-#include "ll/api/form/CustomForm.h" // 唯一的表单头文件
+#include "ll/api/form/CustomForm.h"
 #include "ll/api/mod/RegisterHelper.h"
 #include "mc/server/commands/CommandOrigin.h"
 #include "mc/server/commands/CommandOutput.h"
@@ -57,36 +57,25 @@ bool ChancePlugin::enable() {
                 }
             }
 
-            // ---vvv---  使用正确的表单 API ---vvv---
-
-            // 1. 创建表单对象 (不再需要 shared_ptr)
             ll::form::CustomForm form("§d§l吉凶占卜");
+            form.appendInput("event", "§b请输入汝所求之事：\n§7(例如：我能否成仙)");
 
-            // 2. 使用 appendInput 添加元素
-            form.appendInput("event", "§b请输入汝所求之事：\n§7(例：娶老杨)");
-
-            // 3. 使用 form.sendTo 发送表单，并传入新的回调函数
             form.sendTo(
                 *player,
-                [this](Player& cbPlayer, ll::form::CustomFormResult const& result, ll::form::FormCancelReason reason) {
-                    // 检查表单是否被玩家关闭
-                    if (reason != ll::form::FormCancelReason::NotCancelled) {
-                        return;
-                    }
-                    // 检查玩家是否提交了数据
+                [this](Player& cbPlayer, ll::form::CustomFormResult const& result, ll::form::FormCancelReason) {
+                    // ---vvv---  这里是关键的修正点 ---vvv---
+                    // 最简单、最可靠的检查方式：如果 result 为空，说明表单未成功提交（被关闭或取消）
                     if (!result) {
-                        cbPlayer.sendMessage("§c提交数据为空，天机不可泄露。");
                         return;
                     }
+                    // ---^^^--- 修正结束 ---^^^---
 
-                    // 从结果 map 中查找我们的输入框
                     auto const& resultMap = *result;
                     auto        it        = resultMap.find("event");
                     if (it == resultMap.end()) {
-                        return; // 找不到 "event" 输入框
+                        return;
                     }
 
-                    // 从 std::variant 中提取字符串
                     std::string eventText = std::get<std::string>(it->second);
 
                     if (eventText.empty()) {
@@ -117,8 +106,6 @@ bool ChancePlugin::enable() {
                     );
                 }
             );
-
-            // ---^^^--- API 修正结束 ---^^^---
 
             if (!isOp) {
                 this->mCooldowns[player->getRealName()] = std::chrono::steady_clock::now();
