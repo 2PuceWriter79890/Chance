@@ -2,13 +2,12 @@
 
 #include "ll/api/command/CommandHandle.h"
 #include "ll/api/command/CommandRegistrar.h"
-#include "ll/api/form/CustomForm.h"
-#include "ll/api/form/Form.h" // [FIX] 引入这个核心头文件，它定义了 sendForm 和所有 Response 类型
+#include "ll/api/form/CustomForm.h" // [FIX] 这是唯一需要的表单头文件
 #include "ll/api/mod/RegisterHelper.h"
 #include "mc/server/commands/CommandOrigin.h"
 #include "mc/server/commands/CommandOutput.h"
 #include "mc/server/commands/CommandPermissionLevel.h"
-#include "mc/world/actor/player/Player.h"
+#include "mc/world/actor/player/Player.h" // [FIX] 使用您指定的正确 Player 头文件
 
 #include <iomanip>
 #include <sstream>
@@ -60,10 +59,11 @@ bool ChancePlugin::enable() {
             }
 
             auto form = std::make_shared<ll::form::CustomForm>("§d§l吉凶占卜");
-            form->addInput("event", "§b请输入汝所求之事：\n§7(例如：我能否成仙)");
+            form->addInput("event", "§b请输入汝所求之事：\n§7(例如：娶老杨)");
 
-            // [FIX] 现在 player->sendForm(...) 可以被正确识别
-            player->sendForm(
+            // [FIX] 最终修正：使用独立的、且很可能定义在 CustomForm.h 中的 ll::form::sendForm 函数
+            ll::form::sendForm(
+                player,
                 form,
                 [this](Player* player, ll::form::CustomFormResponse const& resp) {
                     if (resp.isTerminated()) {
