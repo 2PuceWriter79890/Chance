@@ -1,6 +1,7 @@
 {
-    "name": "${modName}",
-    "entry": "${modFile}",
+    "name": "Chance",
+    "entry": "Chance.dll",
     "version": "${modVersion}",
+    "author": "Puce",
     "type": "native"
 }
