@@ -36,7 +36,7 @@ bool ChancePlugin::enable() {
         [this](CommandOrigin const& origin, CommandOutput& output) {
             auto* actor = origin.getEntity();
             if (!actor || !actor->isPlayer()) {
-                output.error("该指令只能由玩家执行。");
+                output.error("该指令只能由玩家执行");
                 return;
             }
             auto* player = static_cast<Player*>(actor);
@@ -58,17 +58,21 @@ bool ChancePlugin::enable() {
             }
 
             ll::form::CustomForm form("§d§l吉凶占卜");
-            form.appendInput("event", "§b请输入汝所求之事：\n§7(例：娶老杨)");
+
+            form.appendInput("event", "§b请输入汝所求之事：\n§7(例如：娶老杨)");
+            
+            // ---vvv---  添加图标 ---vvv---
+            // 尝试调用一个可能存在的 setSubmitButton 重载来设置图标
+            // "textures/ui/book_edit_default" 是一个书与笔的图标路径
+            form.setSubmitButton("提交占卜", "textures/icon/right");
+            // ---^^^--- 添加结束 ---^^^---
 
             form.sendTo(
                 *player,
                 [this](Player& cbPlayer, ll::form::CustomFormResult const& result, ll::form::FormCancelReason) {
-                    // ---vvv---  这里是关键的修正点 ---vvv---
-                    // 最简单、最可靠的检查方式：如果 result 为空，说明表单未成功提交（被关闭或取消）
                     if (!result) {
-                        return;
+                        return; // 玩家关闭或取消了表单
                     }
-                    // ---^^^--- 修正结束 ---^^^---
 
                     auto const& resultMap = *result;
                     auto        it        = resultMap.find("event");
