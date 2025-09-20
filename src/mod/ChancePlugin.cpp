@@ -14,33 +14,25 @@
 
 namespace chance_plugin {
 
-// --- 主类实现 ---
-
 ChancePlugin& ChancePlugin::getInstance() {
     static ChancePlugin instance;
     return instance;
 }
 
-// [MODIFIED] 使用 SimpleForm 替换 ModalForm
 void ChancePlugin::showDisclaimerForm(Player& player) {
-    ll::form::SimpleForm form("§e§l使用申明", "§f此插件仅供娱乐，不提供任何参考价值。\n\n§7点击“确认”即表示您同意此条款。");
+    ll::form::SimpleForm form("§e§l使用申明", "§f此插件仅供娱乐，不作任何参考价值\n\n§7点击“确认”即表示您同意此条例");
 
-    // [FIX] 1. 方法名是 appendButton
-    // [FIX] 2. 带图标需要三个参数: text, image path, image type ("path")
-    form.appendButton("§a确认 (Confirm)", "textures/icon/True", "path"); // 按钮 0
-    form.appendButton("§c退出 (Exit)", "textures/icon/False", "path");    // 按钮 1
+    form.appendButton("§a确认 (Confirm)", "textures/icon/True", "path");
+    form.appendButton("§c退出 (Exit)", "textures/icon/False", "path");
 
-    // [FIX] 3. 回调函数的签名和逻辑已根据头文件更新
     form.sendTo(player, [this](Player& cbPlayer, int buttonIndex, ll::form::FormCancelReason reason) {
-        // 如果表单被关闭或取消，则 reason 会有值
         if (reason) {
             return;
         }
 
-        // 检查玩家是否点击了第一个按钮（“确认”）
         if (buttonIndex == 0) {
             mConfirmedPlayers.insert(cbPlayer.getRealName());
-            cbPlayer.sendMessage("§a您已同意使用申明。");
+            cbPlayer.sendMessage("§a您已同意使用申明");
             
             bool isOp = cbPlayer.getCommandPermissionLevel() >= CommandPermissionLevel::GameDirectors;
             if (!isOp) {
@@ -52,9 +44,9 @@ void ChancePlugin::showDisclaimerForm(Player& player) {
 }
 
 void ChancePlugin::showDivinationForm(Player& player) {
-    ll::form::CustomForm form("§d§l吉凶占卜");
-    form.appendInput("event", "§b请输入汝所求之事：\n§7(例如：我能否成仙)");
-    form.setSubmitButton("提交占卜");
+    ll::form::CustomForm form("§d§l事件占卜");
+    form.appendInput("event", "§b汝的所求之事：\n§7(例：娶老杨)");
+    form.setSubmitButton("占卜");
 
     form.sendTo(
         player,
@@ -71,7 +63,7 @@ void ChancePlugin::showDivinationForm(Player& player) {
 
             std::string eventText = std::get<std::string>(it->second);
             if (eventText.find_first_not_of(" \t\n\v\f\r") == std::string::npos) {
-                cbPlayer.sendMessage("§c汝未填写所求之事，天机不可泄露。");
+                cbPlayer.sendMessage("§c汝未填写所求之事，天机不可泄露");
                 return;
             }
 
@@ -92,8 +84,6 @@ void ChancePlugin::showDivinationForm(Player& player) {
         }
     );
 }
-
-// --- 插件生命周期函数 ---
 
 bool ChancePlugin::load() {
     getSelf().getLogger().info("ChancePlugin 正在加载...");
@@ -126,7 +116,7 @@ bool ChancePlugin::enable() {
                     auto const timeElapsed = std::chrono::duration_cast<std::chrono::seconds>(now - lastUsed).count();
                     if (timeElapsed < 120) {
                         long long remaining = 120 - timeElapsed;
-                        output.error("指令冷却中，请在 " + std::to_string(remaining) + " 秒后重试。");
+                        output.error("指令冷却中，请在 " + std::to_string(remaining) + " 秒后重试");
                         return;
                     }
                 }
@@ -152,6 +142,5 @@ bool ChancePlugin::disable() {
 
 } // namespace chance_plugin
 
-// 注册插件
 chance_plugin::ChancePlugin& plugin = chance_plugin::ChancePlugin::getInstance();
 LL_REGISTER_MOD(chance_plugin::ChancePlugin, plugin);
