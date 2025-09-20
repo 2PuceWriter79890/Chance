@@ -13,7 +13,6 @@
 
 namespace chance_plugin {
 
-// 主类实现
 ChancePlugin& ChancePlugin::getInstance() {
     static ChancePlugin instance;
     return instance;
@@ -30,7 +29,7 @@ bool ChancePlugin::enable() {
     getSelf().getLogger().info("ChancePlugin 正在启用...");
     auto& registrar = ll::command::CommandRegistrar::getInstance();
     auto& handle =
-        registrar.getOrCreateCommand("chance", "打开占卜表单", CommandPermissionLevel::Any, {}, ll::mod::NativeMod::current());
+        registrar.getOrCreateCommand("chance", "占卜事件", CommandPermissionLevel::Any, {}, ll::mod::NativeMod::current());
 
     handle.overload().execute(
         [this](CommandOrigin const& origin, CommandOutput& output) {
@@ -51,27 +50,21 @@ bool ChancePlugin::enable() {
                     auto const timeElapsed = std::chrono::duration_cast<std::chrono::seconds>(now - lastUsed).count();
                     if (timeElapsed < 120) {
                         long long remaining = 120 - timeElapsed;
-                        output.error("指令冷却中，请在 " + std::to_string(remaining) + " 秒后重试。");
+                        output.error("指令冷却中，请在 " + std::to_string(remaining) + " 秒后重试");
                         return;
                     }
                 }
             }
 
             ll::form::CustomForm form("§d§l吉凶占卜");
-
-            form.appendInput("event", "§b请输入汝所求之事：\n§7(例如：娶老杨)");
-            
-            // ---vvv---  添加图标 ---vvv---
-            // 尝试调用一个可能存在的 setSubmitButton 重载来设置图标
-            // "textures/ui/book_edit_default" 是一个书与笔的图标路径
-            form.setSubmitButton("提交占卜", "textures/icon/right");
-            // ---^^^--- 添加结束 ---^^^---
+            form.appendInput("event", "§b请输入汝所求之事：\n§7(例：娶老杨)");
+            form.setSubmitButton("提交占卜");
 
             form.sendTo(
                 *player,
                 [this](Player& cbPlayer, ll::form::CustomFormResult const& result, ll::form::FormCancelReason) {
                     if (!result) {
-                        return; // 玩家关闭或取消了表单
+                        return; 
                     }
 
                     auto const& resultMap = *result;
@@ -81,8 +74,8 @@ bool ChancePlugin::enable() {
                     }
 
                     std::string eventText = std::get<std::string>(it->second);
-
-                    if (eventText.empty()) {
+                    
+                    if (eventText.find_first_not_of(" \t\n\v\f\r") == std::string::npos) {
                         cbPlayer.sendMessage("§c汝未填写所求之事，天机不可泄露");
                         return;
                     }
@@ -128,6 +121,5 @@ bool ChancePlugin::disable() {
 
 } // namespace chance_plugin
 
-// 注册插件
 chance_plugin::ChancePlugin& plugin = chance_plugin::ChancePlugin::getInstance();
 LL_REGISTER_MOD(chance_plugin::ChancePlugin, plugin);
